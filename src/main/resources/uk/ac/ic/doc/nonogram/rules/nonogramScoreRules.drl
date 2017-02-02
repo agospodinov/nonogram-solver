@@ -1,0 +1,106 @@
+package uk.ac.ic.doc.nonogram.rules;
+dialect  "mvel"
+
+import org.optaplanner.core.api.score.buildin.simple.SimpleScoreHolder;
+
+import uk.ac.ic.doc.nonogram.model.*;
+
+global SimpleScoreHolder scoreHolder;
+
+rule "crossLineMustContainColor"
+    when
+        Block($startIndex : startIndex, $size : size, $line : line, $color : color)
+        $crossLine : Line(index >= $startIndex && index < $startIndex + $size, type != $line.type)
+        not(exists(Block(line == $crossLine, color == $color)))
+    then
+        scoreHolder.addConstraintMatch(kcontext, -($crossLine.getType() == LineType.ROW
+            ? $crossLine.getNonogram().getWidth()
+            : $crossLine.getNonogram().getHeight()));
+end
+
+//rule "crossLineMustContainColorInOrder"
+//    when
+//        Block($startIndex : startIndex, $size : size, $line : line, $color : color)
+//        $crossLine : Line(index >= $startIndex && index < $startIndex + $size, type != $line.type)
+//        $block : Block(line == $crossLine, color == $color)
+//        eval($block.getMinStartIndex() > $line.index || $block.getMaxStartIndex() + $block.size < $line.index)
+//    then
+//        scoreHolder.addConstraintMatch(kcontext, -1);
+//end
+
+rule "blocksMustNotOverlap"
+    when
+        $block : Block($startIndex : startIndex, $size : size, $line : line)
+        Block(this != $block, line == $line, $startIndex2 : startIndex,
+            startIndex >= $startIndex && startIndex < ($startIndex + $size))
+    then
+        scoreHolder.addConstraintMatch(kcontext, -($startIndex + $size - $startIndex2));
+end
+
+rule "sameColorBlocksMustBeSpacedOut"
+    when
+        $block : Block($startIndex : startIndex, $size : size, $line : line, $color : color)
+        Block(this != $block, line == $line, $startIndex2 : startIndex,
+            startIndex >= $startIndex && startIndex < ($startIndex + $size + 1), color == $color)
+    then
+        scoreHolder.addConstraintMatch(kcontext, -($startIndex + $size + 1 - $startIndex2));
+end
+
+rule "crossLineMustNotContainExtendingBlocks"
+    when
+        $block : Block($startIndex : startIndex, $size : size, $line : line, $color : color)
+        $crossLine : (Line(type != $line.type, index == $startIndex - 1)
+            or Line(type != $line.type, index == $startIndex + $size))
+        exists(Block(line == $crossLine, startIndex <= $line.index && startIndex + size > $line.index, color == $color))
+    then
+        scoreHolder.addConstraintMatch(kcontext, -1);
+end
+
+rule "crossLineMustBeValid"
+    when
+        Block($startIndex : startIndex, $size : size, $line : line, $color : color)
+        not(forall($crossLine : Line(index >= $startIndex && index < $startIndex + $size, type != $line.type)
+            Block(line == $crossLine, color == $color, startIndex <= $line.index && startIndex + size > $line.index)))
+    then
+        scoreHolder.addConstraintMatch(kcontext, -$size);
+end
+
+rule "linesMustHaveCorrectNumberOfBlocks"
+    when
+        $line : Line($index : index, $type : type)
+        $totalBlocks : Double() from accumulate (
+            Block(line == $line, $blockSize : size),
+            sum($blockSize))
+        $totalCrossBlocks : Double() from accumulate (
+            $crossBlock : Block(line.type != $type, startIndex <= $index && startIndex + size > $index),
+            count($crossBlock))
+        eval(Math.abs($totalBlocks - $totalCrossBlocks) > 0.0)
+    then
+        scoreHolder.addConstraintMatch(kcontext, (int) (-Math.abs($totalBlocks - $totalCrossBlocks)));
+end
+
+rule "crossLineMustBeValidForOverlaps"
+    when
+        $block : Block($startIndex : startIndex, $size : size, $line : line, $color : color)
+        $crossLine : Line($index : index, index >= $startIndex && index < $startIndex + $size, type != $line.type)
+        eval($index < $block.getMinStartIndex() + $size && $index >= $block.getMaxStartIndex())
+        not(exists(Block(line == $crossLine, color == $color, startIndex <= $line.index && startIndex + size > $line.index)))
+    then
+        scoreHolder.addConstraintMatch(kcontext, -($block.getMinStartIndex() + $size - $block.getMaxStartIndex()));
+end
+
+rule "blocksMustBeInOrder"
+    when
+        Block($index : index, $startIndex : startIndex, $line : line)
+        Block(line == $line, $startIndex2 : startIndex, startIndex > $startIndex, index < $index)
+    then
+        scoreHolder.addConstraintMatch(kcontext, -($startIndex2 - $startIndex));
+end
+
+//rule "blockMustHaveValidStartIndex"
+//    when
+//        $block : Block($startIndex : startIndex)
+//        eval($startIndex < $block.getMinStartIndex() || $startIndex > $block.getMaxStartIndex())
+//    then
+//        scoreHolder.addConstraintMatch(kcontext, -1);
+//end

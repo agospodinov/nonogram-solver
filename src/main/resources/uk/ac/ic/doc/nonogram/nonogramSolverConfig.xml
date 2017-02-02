@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<solver>
+    <environmentMode>FAST_ASSERT</environmentMode>
+    <solutionClass>uk.ac.ic.doc.nonogram.model.Nonogram</solutionClass>
+    <entityClass>uk.ac.ic.doc.nonogram.model.Block</entityClass>
+
+    <scoreDirectorFactory>
+        <scoreDefinitionType>SIMPLE</scoreDefinitionType>
+        <scoreDrl>uk/ac/ic/doc/nonogram/rules/nonogramScoreRules.drl</scoreDrl>
+    </scoreDirectorFactory>
+
+    <termination>
+        <bestScoreLimit>0</bestScoreLimit>
+    </termination>
+    <localSearch>
+        <unionMoveSelector>
+            <cacheType>PHASE</cacheType>
+            <selectionOrder>SHUFFLED</selectionOrder>
+            <moveListFactory>
+                <moveListFactoryClass>uk.ac.ic.doc.nonogram.solver.move.factory.BlockChangeStartMoveFactory</moveListFactoryClass>
+            </moveListFactory>
+            <cartesianProductMoveSelector>
+                <moveListFactory>
+                    <moveListFactoryClass>uk.ac.ic.doc.nonogram.solver.move.factory.BlockChangeStartMoveFactory</moveListFactoryClass>
+                </moveListFactory>
+                <moveListFactory>
+                    <moveListFactoryClass>uk.ac.ic.doc.nonogram.solver.move.factory.BlockChangeStartMoveFactory</moveListFactoryClass>
+                </moveListFactory>
+            </cartesianProductMoveSelector>
+        </unionMoveSelector>
+        <acceptor>
+            <entityTabuSize>21</entityTabuSize>
+            <simulatedAnnealingStartingTemperature>80</simulatedAnnealingStartingTemperature>
+            <!--<acceptorType>HILL_CLIMBING</acceptorType>-->
+            <!--<stepCountingHillClimbingSize>400</stepCountingHillClimbingSize>-->
+        </acceptor>
+        <forager>
+            <!--<acceptedCountLimit>2000</acceptedCountLimit>-->
+            <acceptedCountLimit>4</acceptedCountLimit>
+            <!--<acceptedCountLimit>1</acceptedCountLimit>-->
+            <pickEarlyType>NEVER</pickEarlyType>
+        </forager>
+    </localSearch>
+</solver>
